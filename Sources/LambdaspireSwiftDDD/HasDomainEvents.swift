@@ -1,17 +1,17 @@
 
 // TODO: Can macros help with the repetition?
 
-public protocol HasDomainEvents {
+public protocol HasDomainEvents : AnyObject {
     var events: [any DomainEvent] { get set }
 }
 
 extension HasDomainEvents {
     
-    public mutating func clearEvents() {
+    public func clearEvents() {
         events = []
     }
     
-    public mutating func raiseEvent<T: DomainEvent>(_ event: T) {
+    public func raiseEvent<T: DomainEvent>(_ event: T) {
         events.append(event)
     }
 }

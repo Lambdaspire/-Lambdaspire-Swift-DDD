@@ -26,7 +26,7 @@ public class UnitOfWork<TContext : DomainContext> {
             
             defer {
                 Log.debug("Clearing domain events from entities.")
-                for var r in raisers {
+                for r in raisers {
                     r.clearEvents()
                 }
             }

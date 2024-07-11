@@ -13,9 +13,7 @@ class TestEntity : HasDomainEvents {
     }
     
     func test() {
-        // TODO: Fighting compiler.
-        var s = self
-        s.raiseEvent(TestDomainEvent(id: id))
+        raiseEvent(TestDomainEvent(id: id))
     }
     
     // TODO: Can macros help with the repetition?

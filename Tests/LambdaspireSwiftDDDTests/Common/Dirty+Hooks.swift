@@ -28,3 +28,23 @@ class Hooks {
         hooks.removeAll()
     }
 }
+
+class Boxed<T> {
+    var value: T
+    
+    init(initialValue: T) {
+        value = initialValue
+    }
+}
+
+extension Hooks {
+    
+    func hook<T>(_ key: String, value: T, fn: @escaping (inout T) -> Void) -> Boxed<T> {
+        
+        let b: Boxed<T> = .init(initialValue: value)
+        
+        hook(key) { fn(&b.value) }
+        
+        return b
+    }
+}

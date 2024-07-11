@@ -3,6 +3,7 @@ import XCTest
 import SwiftData
 import LambdaspireAbstractions
 import LambdaspireDependencyResolution
+import LambdaspireLogging
 
 @testable import LambdaspireSwiftDDD
 
@@ -14,6 +15,8 @@ final class LambdaspireSwiftDDDTests: XCTestCase {
     private var hooks: Hooks!
     
     override func setUp() async throws {
+        
+        Log.setLogger(PrintLogger())
         
         hooks = .init()
         
@@ -39,11 +42,8 @@ final class LambdaspireSwiftDDDTests: XCTestCase {
     func test_HappyPath_ChangesAreCommitted_And_DomainEventHandlersAreCalled() async throws {
         let id: UUID = .init()
         
-        var calledPreCommit = false
-        hooks.hook("PreCommit") { calledPreCommit = true }
-        
-        var calledPostCommit = false
-        hooks.hook("PostCommit") { calledPostCommit = true }
+        let calledPreCommit = hooks.hook("PreCommit", value: false) { $0 = true }
+        let calledPostCommit = hooks.hook("PostCommit", value: false) { $0 = true }
         
         try await unitOfWork.execute { c in
             
@@ -63,18 +63,15 @@ final class LambdaspireSwiftDDDTests: XCTestCase {
         
         XCTAssertNotNil(entity)
         XCTAssertEqual(count, 1)
-        XCTAssertTrue(calledPreCommit)
-        XCTAssertTrue(calledPostCommit)
+        XCTAssertTrue(calledPreCommit.value)
+        XCTAssertTrue(calledPostCommit.value)
     }
     
     func test_WhenUnitOfWorkExecutionFailuresOccur_ChangesAreRolledBack_And_HandlersAreNotCalled() async throws {
         let id: UUID = .init()
         
-        var calledPreCommit = false
-        hooks.hook("PreCommit") { calledPreCommit = true }
-        
-        var calledPostCommit = false
-        hooks.hook("PostCommit") { calledPostCommit = true }
+        let calledPreCommit = hooks.hook("PreCommit", value: false) { $0 = true }
+        let calledPostCommit = hooks.hook("PostCommit", value: false) { $0 = true }
         
         do {
             
@@ -97,8 +94,8 @@ final class LambdaspireSwiftDDDTests: XCTestCase {
         
         XCTAssertNil(entity)
         XCTAssertEqual(count, 0)
-        XCTAssertFalse(calledPreCommit)
-        XCTAssertFalse(calledPostCommit)
+        XCTAssertFalse(calledPreCommit.value)
+        XCTAssertFalse(calledPostCommit.value)
     }
     
     func test_WhenPreCommitHandlerFailuresOccur_ChangesAreRolledBack_And_PostCommitHandlersAreNotCalled() async throws {
@@ -107,14 +104,9 @@ final class LambdaspireSwiftDDDTests: XCTestCase {
         
         let id: UUID = .init()
         
-        var calledPreCommit = false
-        hooks.hook("PreCommit") { calledPreCommit = true }
-        
-        var calledThrowingPreCommit = false
-        hooks.hook("ThrowingPreCommit") { calledThrowingPreCommit = true }
-        
-        var calledPostCommit = false
-        hooks.hook("PostCommit") { calledPostCommit = true }
+        let calledPreCommit = hooks.hook("PreCommit", value: false) { $0 = true }
+        let calledThrowingPreCommit = hooks.hook("ThrowingPreCommit", value: false) { $0 = true }
+        let calledPostCommit = hooks.hook("PostCommit", value: false) { $0 = true }
         
         do {
             
@@ -127,8 +119,8 @@ final class LambdaspireSwiftDDDTests: XCTestCase {
             
         } catch { }
         
-        XCTAssertTrue(calledPreCommit)
-        XCTAssertTrue(calledThrowingPreCommit)
-        XCTAssertFalse(calledPostCommit)
+        XCTAssertTrue(calledPreCommit.value)
+        XCTAssertTrue(calledThrowingPreCommit.value)
+        XCTAssertFalse(calledPostCommit.value)
     }
 } 

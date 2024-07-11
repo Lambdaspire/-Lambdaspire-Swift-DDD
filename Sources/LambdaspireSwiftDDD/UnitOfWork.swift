@@ -16,11 +16,16 @@ public class UnitOfWork<TContext : DomainContext> {
         
         do {
             
+            Log.debug("Executing body in UnitOfWOrk.")
+            
             try await body(context)
+            
+            Log.debug("Executing pre-commit domain event handlers in UnitOfWOrk.")
             
             let raisers = try await context.collectEventRaisers()
             
             defer {
+                Log.debug("Clearing domain events from entities.")
                 for var r in raisers {
                     r.clearEvents()
                 }
@@ -32,7 +37,7 @@ public class UnitOfWork<TContext : DomainContext> {
                 do {
                     try await delegator.handlePreCommit(event: e)
                 } catch {
-                    Log.error(error, "An error occurred handling pre-commit event {EventType}.", (
+                    Log.error(error, "An error occurred handling event {EventType} with pre-commit handler.", (
                         EventType: type(of: e).typeIdentifier,
                         EventData: e
                     ))
@@ -41,7 +46,11 @@ public class UnitOfWork<TContext : DomainContext> {
                 }
             }
             
+            Log.debug("Committing in UnitOfWOrk.")
+            
             try await context.commit()
+            
+            Log.debug("Executing post-commit domain event handlers in UnitOfWOrk.")
             
             for e in events {
                 do {
@@ -56,11 +65,13 @@ public class UnitOfWork<TContext : DomainContext> {
             
         } catch {
             
-            Log.error(error, "An error occurred committing UnitOfWork.")
+            Log.error(error, "An error occurred executing UnitOfWork.")
             
             try await context.rollback()
             
             throw error
         }
+        
+        Log.debug("Finished executing UnitOfWOrk.")
     }
 }

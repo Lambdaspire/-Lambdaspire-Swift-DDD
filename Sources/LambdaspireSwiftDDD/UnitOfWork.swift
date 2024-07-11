@@ -1,51 +1,66 @@
 
+import LambdaspireAbstractions
 import SwiftData
 
-class UnitOfWork {
+public class UnitOfWork<TContext : DomainContext> {
     
     private let delegator: DomainEventDelegator
-    private let modelContext: ModelContext
+    private let context: TContext
     
-    init(delegator: DomainEventDelegator, modelContext: ModelContext) {
+    public init(delegator: DomainEventDelegator, context: TContext) {
         self.delegator = delegator
-        self.modelContext = modelContext
+        self.context = context
     }
     
-    func execute(body: @escaping (ModelContext) async throws -> Void) async throws {
+    public func execute(body: @escaping (TContext) async throws -> Void) async throws {
+        
         do {
-            try await body(modelContext)
-            try await save()
+            
+            try await body(context)
+            
+            let raisers = try await context.collectEventRaisers()
+            
+            defer {
+                for var r in raisers {
+                    r.clearEvents()
+                }
+            }
+            
+            let events = raisers.flatMap { $0.events }
+            
+            for e in events {
+                do {
+                    try await delegator.handlePreCommit(event: e)
+                } catch {
+                    Log.error(error, "An error occurred handling pre-commit event {EventType}.", (
+                        EventType: type(of: e).typeIdentifier,
+                        EventData: e
+                    ))
+                    
+                    throw error
+                }
+            }
+            
+            try await context.commit()
+            
+            for e in events {
+                do {
+                    try await delegator.handlePostCommit(event: e)
+                } catch {
+                    Log.error(error, "An error occurred handling post-commit event {EventType}.", (
+                        EventType: type(of: e).typeIdentifier,
+                        EventData: e
+                    ))
+                }
+            }
+            
         } catch {
-            modelContext.rollback()
+            
+            Log.error(error, "An error occurred committing UnitOfWork.")
+            
+            try await context.rollback()
+            
             throw error
         }
-    }
-    
-    func save() async throws {
-        
-        guard modelContext.hasChanges else {
-            return
-        }
-        
-        // TODO: This doesn't cover unchanged models that raise events.
-        let withEvents = (
-            modelContext.changedModelsArray +
-            modelContext.insertedModelsArray +
-            modelContext.deletedModelsArray
-        )
-        .compactMap { $0 as? HasDomainEvents }
-        .filter { !$0.events.isEmpty }
-        
-        let events = withEvents.flatMap { $0.events }
-        
-        for e in events {
-            try await delegator.handle(event: e)
-        }
-        
-        for var w in withEvents {
-            w.clearEvents()
-        }
-        
-        try modelContext.save()
     }
 }

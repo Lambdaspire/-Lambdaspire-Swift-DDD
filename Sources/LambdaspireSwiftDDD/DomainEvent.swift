@@ -1,6 +1,6 @@
 
-protocol DomainEvent { }
+public protocol DomainEvent { }
 
-extension DomainEvent {
+public extension DomainEvent {
     static var typeIdentifier: String { .init(describing: Self.self) }
 }

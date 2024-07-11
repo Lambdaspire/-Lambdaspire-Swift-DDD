@@ -21,13 +21,19 @@ let package = Package(
     dependencies: [
         .package(
             url: "https://github.com/Lambdaspire/Lambdaspire-Swift-DependencyResolution",
+            from: "1.0.0"),
+        .package(
+            url: "https://github.com/Lambdaspire/Lambdaspire-Swift-Abstractions",
             from: "1.0.0")
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
-            name: "LambdaspireSwiftDDD"),
+            name: "LambdaspireSwiftDDD",
+            dependencies: [
+                .product(name: "LambdaspireAbstractions", package: "Lambdaspire-Swift-Abstractions")
+            ]),
         .testTarget(
             name: "LambdaspireSwiftDDDTests",
             dependencies: [

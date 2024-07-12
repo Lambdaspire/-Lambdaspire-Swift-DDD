@@ -18,6 +18,11 @@ public class DomainEventHandlerRegistrar : DomainEventDelegator {
             handlers[T.DomainEventType.typeIdentifier] = (handlers[T.DomainEventType.typeIdentifier] ?? []) + [
                 { [weak self] in
                     guard let self else { return }
+                    Log.debug(
+                        "Handling event {EventType} with handler {EventHandlerType}.", (
+                            EventType: T.DomainEventType.typeIdentifier,
+                            EventHandlerType: String(describing: T.self)
+                        ))
                     try await T.handle(event: $0 as! T.DomainEventType, resolver: resolver)
                 }
             ]

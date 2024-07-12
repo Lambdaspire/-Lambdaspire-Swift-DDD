@@ -1,10 +1,12 @@
 
 import LambdaspireSwiftDDD
+import LambdaspireSwiftDDDMacros
 import SwiftData
 import Foundation
 
 @Model
-class TestEntity : HasDomainEvents {
+@DomainEntity
+class TestEntity {
     
     var id: UUID = UUID()
     
@@ -15,10 +17,6 @@ class TestEntity : HasDomainEvents {
     func test() {
         raiseEvent(TestDomainEvent(id: id))
     }
-    
-    // TODO: Can macros help with the repetition?
-    @Transient
-    var events: [any DomainEvent] = []
 }
 
 struct TestDomainEvent : DomainEvent {
@@ -26,15 +24,12 @@ struct TestDomainEvent : DomainEvent {
 }
 
 @Model
-class AnotherTestEntity : HasDomainEvents {
+@DomainEntity
+class AnotherTestEntity {
     
     var id: UUID = UUID()
     
     init(id: UUID) {
         self.id = id
     }
-    
-    // TODO: Can macros help with the repetition?
-    @Transient
-    var events: [any DomainEvent] = []
 }

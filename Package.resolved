@@ -1,5 +1,5 @@
 {
-  "originHash" : "2a6d6897610466393c33570e58a03d824071ac802a8ae349127307d5bbd3ec41",
+  "originHash" : "639a88cab53bcb36ed668f0220c34d6efe811820ad6d53439cc6ee9451fa262e",
   "pins" : [
     {
       "identity" : "lambdaspire-swift-abstractions",
@@ -26,6 +26,15 @@
       "state" : {
         "revision" : "37eeaca6c05d5c6a9cdbbcbe098cb0c27fb63447",
         "version" : "1.0.0"
+      }
+    },
+    {
+      "identity" : "swift-syntax",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-syntax.git",
+      "state" : {
+        "revision" : "64889f0c732f210a935a0ad7cda38f77f876262d",
+        "version" : "509.1.1"
       }
     }
   ],

@@ -2,6 +2,7 @@
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
+import CompilerPluginSupport
 
 let package = Package(
     name: "LambdaspireSwiftDDD",
@@ -13,12 +14,13 @@ let package = Package(
         .visionOS(.v1)
     ],
     products: [
-        // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
             name: "LambdaspireSwiftDDD",
-            targets: ["LambdaspireSwiftDDD"]),
+            targets: ["LambdaspireSwiftDDD"])
     ],
     dependencies: [
+        
+        // Lambdaspire
         .package(
             url: "https://github.com/Lambdaspire/Lambdaspire-Swift-DependencyResolution",
             from: "1.0.0"),
@@ -27,11 +29,33 @@ let package = Package(
             from: "1.0.0"),
         .package(
             url: "https://github.com/Lambdaspire/Lambdaspire-Swift-Logging",
-            from: "1.0.0")
+            from: "1.0.0"),
+        
+        // Apple
+        .package(
+            url: "https://github.com/apple/swift-syntax",
+            from: "509.0.0")
     ],
     targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
+        
+        // Macros and Macros Tests
+        .macro(
+            name: "LambdaspireSwiftDDDMacros",
+            dependencies: [
+                .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
+                .product(name: "SwiftCompilerPlugin", package: "swift-syntax")
+            ]
+        ),
+        .testTarget(
+            name: "LambdaspireSwiftDDDMacrosTests",
+            dependencies: [
+                "LambdaspireSwiftDDD",
+                "LambdaspireSwiftDDDMacros",
+                .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
+            ]
+        ),
+        
+        // Library and Library Tests
         .target(
             name: "LambdaspireSwiftDDD",
             dependencies: [
@@ -41,6 +65,7 @@ let package = Package(
             name: "LambdaspireSwiftDDDTests",
             dependencies: [
                 "LambdaspireSwiftDDD",
+                "LambdaspireSwiftDDDMacros",
                 .product(name: "LambdaspireDependencyResolution", package: "Lambdaspire-Swift-DependencyResolution"),
                 .product(name: "LambdaspireLogging", package: "Lambdaspire-Swift-Logging"),
             ]),

@@ -2,10 +2,10 @@
 import LambdaspireAbstractions
 import SwiftData
 
-public class UnitOfWork<TContext : DomainContext> {
+public struct UnitOfWork<TContext : DomainContext> {
     
-    private let delegator: DomainEventDelegator
-    private let context: TContext
+    var delegator: DomainEventDelegator
+    var context: TContext
     
     public init(delegator: DomainEventDelegator, context: TContext) {
         self.delegator = delegator

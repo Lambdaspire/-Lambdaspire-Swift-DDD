@@ -60,7 +60,7 @@ Handlers which should fire before data is committed to storage are the simplest.
 ```swift
 struct When_EmployeeHired_AssignThemABuddy : DomainEventHandler {
     
-    static func handle(event: TestDomainEvent, resolver: DependencyResolver) async throws {
+    static func handle(event: EmployeeHiredEvent, resolver: DependencyResolver) async throws {
         try await resolver
             .resolve(BuddySystem.self)
             .assignBuddyToEmployee(id: event.employeeId)
@@ -75,7 +75,7 @@ struct When_EmployeeHired_SendThemAWelcomePackage : DomainEventHandler {
     
     static var isPostCommit: Bool { true }
     
-    static func handle(event: TestDomainEvent, resolver: DependencyResolver) async throws {
+    static func handle(event: EmployeeHiredEvent, resolver: DependencyResolver) async throws {
         try await resolver
             .resolve(HumanResources.self)
             .requestWelcomePackageForEmployee(id: event.employeeId)

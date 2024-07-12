@@ -49,7 +49,6 @@ let package = Package(
         .testTarget(
             name: "LambdaspireSwiftDDDMacrosTests",
             dependencies: [
-                "LambdaspireSwiftDDD",
                 "LambdaspireSwiftDDDMacros",
                 .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
             ]
@@ -59,13 +58,13 @@ let package = Package(
         .target(
             name: "LambdaspireSwiftDDD",
             dependencies: [
+                "LambdaspireSwiftDDDMacros",
                 .product(name: "LambdaspireAbstractions", package: "Lambdaspire-Swift-Abstractions")
             ]),
         .testTarget(
             name: "LambdaspireSwiftDDDTests",
             dependencies: [
                 "LambdaspireSwiftDDD",
-                "LambdaspireSwiftDDDMacros",
                 .product(name: "LambdaspireDependencyResolution", package: "Lambdaspire-Swift-DependencyResolution"),
                 .product(name: "LambdaspireLogging", package: "Lambdaspire-Swift-Logging"),
             ]),

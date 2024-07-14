@@ -1,6 +1,4 @@
 
-// TODO: Can macros help with the repetition?
-
 public protocol HasDomainEvents : AnyObject {
     var events: [any DomainEvent] { get set }
 }

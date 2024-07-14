@@ -1,6 +1,5 @@
 
 import LambdaspireAbstractions
-import SwiftData
 
 public struct UnitOfWork<TContext : DomainContext> {
     

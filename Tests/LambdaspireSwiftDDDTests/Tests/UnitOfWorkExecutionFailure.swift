@@ -16,19 +16,15 @@ final class UnitOfWorkExecutionFailureTests : BaseTests {
         
         let calledPreCommit = hooks.hook("PreCommit", value: false) { $0 = true }
         let calledPostCommit = hooks.hook("PostCommit", value: false) { $0 = true }
-        
-        do {
             
-            try await unitOfWork.execute { c in
-                
-                let t: TestEntity = .init(id: id)
-                t.test()
-                c.insert(t)
-                
-                throw EmptyError()
-            }
+        try? await unitOfWork.execute { c in
             
-        } catch { }
+            let t: TestEntity = .init(id: id)
+            t.test()
+            c.insert(t)
+            
+            throw EmptyError()
+        }
         
         let entity = try! modelContext.fetch(.init(predicate: #Predicate<TestEntity> {
             $0.id == id

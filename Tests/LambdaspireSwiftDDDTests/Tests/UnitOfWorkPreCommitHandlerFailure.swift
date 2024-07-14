@@ -22,17 +22,21 @@ final class UnitOfWorkPreCommitHandlerFailureTests : BaseTests {
         let calledThrowingPreCommit = hooks.hook("ThrowingPreCommit", value: false) { $0 = true }
         let calledPostCommit = hooks.hook("PostCommit", value: false) { $0 = true }
         
-        do {
-            
-            try await unitOfWork.execute { c in
+        try? await unitOfWork.execute { c in
                 
-                let t: TestEntity = .init(id: id)
-                t.test()
-                c.insert(t)
-            }
-            
-        } catch { }
+            let t: TestEntity = .init(id: id)
+            t.test()
+            c.insert(t)
+        }
         
+        let entity = try! modelContext.fetch(.init(predicate: #Predicate<TestEntity> {
+            $0.id == id
+        })).first
+        
+        let count = try! modelContext.fetchCount(FetchDescriptor<TestEntity>())
+        
+        XCTAssertNil(entity)
+        XCTAssertEqual(count, 0)
         XCTAssertTrue(calledPreCommit.value)
         XCTAssertTrue(calledThrowingPreCommit.value)
         XCTAssertFalse(calledPostCommit.value)

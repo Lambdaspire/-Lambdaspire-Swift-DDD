@@ -79,7 +79,7 @@ struct OrderPlacedHandler : DomainEventHandler {
 }
 ```
 
-The `handle` function accepts the specific type of `DomainEvent` in question and a `DepedencyResolver` to resolve dependencies in a "service locator" fashion.
+The `handle` function accepts the specific type of `DomainEvent` in question and a `DependencyResolver` to resolve dependencies in a "service locator" fashion.
 
 #### Pre-Commit Handlers
 

@@ -1,110 +1,215 @@
 # Lambdaspire Swift DDD
 
-Helps you write more Domain Driven Design (DDD) style code with SwiftData.
+As with any architecturally unopinionated data access layer, SwiftData code is prone to many of the common pitfalls of undisciplined software development: Repetitive code in some monolithic "business layer", poorly contained side-effects, or (worse) business logic carelessly scattered about, offering no clarity on the domain it represents.
 
-## Domain Events
+This package aims to provide lightweight but opinionated ways to manage your app's domain logic with concepts inspired by the principles of [Domain Driven Design](https://www.amazon.com.au/Domain-Driven-Design-Tackling-Complexity-Software/dp/0321125215).
 
-Allows you to decouple side-effects from their source. You can define pre-commit and post-commit domain event handlers. The former execute before changes are saved and may rollback the transaction. The latter execute after changes are saved and fail more gracefully.
+## What's Inside (so far)
 
-### How to hold it
+The package is an ongoing work in progress that will likely never be "finished".
 
-Define your SwiftData models as usual using the `@Model` macro.
+For now, the package provides a basic approach to performing a "Unit of Work" and mechanisms for raising and handling domain events within it.
 
-If your models (entities) raise domain events you want to handle, you should also apply the `@DomainEntity` macro. This will add the necessary conformances that allow you to raise events using `raiseEvent(...)` and have the events handled (described later).
+### Unit of Work
+
+A Unit of Work encompasses a body of activity executed against a given domain context. Upon completion of the work, domain events raised are handled and any necessary transaction management (committing upon success or rolling back upon failure) is performed.
+
+The typical usage would be a `UnitOfWork` wrapping a SwiftData `ModelContext` (i.e. `UnitOfWork<ModelContext>`).
+
+SwiftData Models that are changed, updated, or deleted during the work can raise domain events which will be handled before and/or after committing the changes to persistence.
+
+### Domain Entities
+
+A Domain Entity (in this package) is just an object capable of raising events and exposing those events to some domain context for collection.
+
+The typical usage would be on a SwiftData `@Model`.
+
+Domain Entities are most concisely created with the `@DomainEntity` macro.
 
 ```swift
 @Model
 @DomainEntity
-class Employee {
-    
-    // ...
-    
-    func youreHired() {
-        raiseEvent(EmployeeHiredEvent(employeeId: myId))
-    } 
+class Customer {
+
+    let uuid: UUID = UUID()
+
+    var orders: [Order] = []
+
+    // ... init ...
+
+    func placeOrder(_ order: Order) {
+
+        orders.append(order)
+
+        raiseEvent(OrderPlaced(customerId: uuid, orderId: order.id))
+    }
 }
 ```
 
-All this does is generate the necessary code to conform to the `HasDomainEvents` protocol. You could do it manually (not recommended):
+The `@DomainEntity` macro adds conformance to `HasDomainEvents` (which enables `raiseEvent`) and creates a `@Transient` array of `DomainEvent` for accumulation during a Unit of Work and collection at the end of it. The code could be written manually, but macro takes care of it and is more future-proof.
 
-<details>
-<summary><strong>Aside: How to manually implement <code>HasDomainEvents</code>.</strong></summary>
+### Domain Events and Handlers
 
-Conform your model to the `HasDomainEvents` protocol with `@Transient var events: [any DomainEvent] = []`. It must be transient, otherwise SwiftData will attempt to persist the events to storage.
+Domain events and their handlers allow you to manage the side effects of certain activities that occur within the domain. This may include cleanup tasks when a Model is deleted, scheduling notifications when a Model is created or updated, or (consensual) logging and analytics operations for all data changes.
+
+In this package, there are two types of handlers:
+- Pre-commit handlers, and
+- Post-commit handlers
+
+Domain events are described as simple structs conforming to `DomainEvent`.
 
 ```swift
+struct OrderPlaced : DomainEvent {
+    var customerId: UUID
+    var orderId: UUID
+}
+```
+
+Domain event handlers can be defined as structs conforming to `DomainEventHandler`.
+
+```swift
+struct OrderPlacedHandler : DomainEventHandler {
+    static func handle(event: OrderPlaced, resolver: DependencyResolver) async throws {
+        resolver
+            .resolve(NotificationService.self)
+            .notifyCustomer(
+                customerId: event.customerId,
+                message: "Your Order #\(event.orderId) is being processed.")
+    }
+}
+```
+
+The `handle` function accepts the specific type of `DomainEvent` in question and a `DepedencyResolver` to resolve dependencies in a "service locator" fashion.
+
+#### Pre-Commit Handlers
+
+These execute before changes are persisted and will prevent the commission of the Unit of Work if they fail.
+
+Use these for side-effects that are intra-domain, with implications on domain integrity.
+
+Any `DomainEventHandler` is pre-commit by default.
+
+#### Post-Commit Handlers
+
+These execute after changes are persisted and fail gracefully, independently of each other. A failing post-commit handler will not rollback a Unit of Work.
+
+Use these for side-effects that are extra-domain, perhaps with dependencies on external services / resources that may be unreliable.
+
+A `DomainEventHandler` is post-commit if it overrides the default implementation of `static var isPostCommit: Bool { true }` to instead return `false`.
+
+```swift
+struct OrderPlacedHandler : DomainEventHandler {
+
+    static let isPostCommit = true
+
+    static func handle(event: OrderPlaced, resolver: DependencyResolver) async throws {
+        // unchanged
+    }
+}
+```
+
+#### Multiple Handlers Supported
+
+There can be many handlers for each type of event. The order of execution is not guaranteed, aside from pre-commit handlers preceding all post-commit handlers.
+
+## How to use it
+
+Here's a minimal, illustrative, non-compiling example of all the pieces, combined.
+
+```swift
+// Define the domain.
 @Model
-class Employee : HasDomainEvents {
+@DomainEntity
+class Customer {
 
-    // ... 
-    
-    @Transient var events: [any DomainEvent] = []
-}
-```
-</details>
+    let uuid: UUID = UUID()
+    var orders: [Order] = []
 
-<br/>
+    // ... init ...
 
-Define your domain events as simple structs conforming to `DomainEvent`. It's best if the domain events are lightweight, used for data transfer only.
-
-```swift
-struct EmployeeHiredEvent : DomainEvent {
-    var employeeId: UUID
-}
-```
-
-Define your domain event handlers as structs conforming to `DomainEventHandler`.
-
-Handlers which should fire before data is committed to storage are the simplest.
-
-```swift
-struct When_EmployeeHired_AssignThemABuddy : DomainEventHandler {
-    
-    static func handle(event: EmployeeHiredEvent, resolver: DependencyResolver) async throws {
-        try await resolver
-            .resolve(BuddySystem.self)
-            .assignBuddyToEmployee(id: event.employeeId)
+    func placeOrder(_ order: Order) {
+        orders.append(order)
+        raiseEvent(OrderPlaced(customerId: uuid, orderId: order.uuid))
     }
 }
-```
 
-Handlers which should fire after data is committed to storage should override the default implementation of `isPostCommit` with one that returns `true`.
+@Model
+class Order {
+    let uuid: UUID = UUID()
+    
+    // ... init ...
+}
 
-```swift
-struct When_EmployeeHired_SendThemAWelcomePackage : DomainEventHandler {
-    
-    static var isPostCommit: Bool { true }
-    
-    static func handle(event: EmployeeHiredEvent, resolver: DependencyResolver) async throws {
-        try await resolver
-            .resolve(HumanResources.self)
-            .requestWelcomePackageForEmployee(id: event.employeeId)
+struct OrderPlaced : DomainEvent {
+    var customerId: UUID
+    var orderId: UUID
+}
+
+// Define the event handlers.
+struct OrderPlacedHandler : DomainEventHandler {
+
+    static let isPostCommit = true
+
+    static func handle(event: OrderPlaced, resolver: DependencyResolver) async throws {
+        resolver
+            .resolve(NotificationService.self)
+            .notifyCustomer(
+                customerId: event.customerId,
+                message: "Your Order #\(event.orderId) is being processed.")
     }
 }
-```
 
-The handlers need to be registered with an object that will ultimately be used to delegate events to their respective handlers. Use `DomainEventHandlerRegistrar` for this.
-
-```swift
-let resolver: DependencyResolver = SomeImplementation()
-let registrar: DomainEventHandlerRegistrar = .init(resolver: resolver)
-registrar.register(When_EmployeeHired_AssignThemABuddy.self)
-registrar.register(When_EmployeeHired_SendThemAWelcomePackage.self)
-```
-
-The component that ties all this together is the `UnitOfWork`. It takes any `DomainEventDelegator` (which `DomainEventHandlerRegistrar` conforms to) and a generic `TContext`, which in most circumstances will be a SwiftData `ModelContext`. With it, you can execute contained bodies of work that may trigger Domain Events, and those events will be handled accordingly.
-
-```swift
-let uow: UnitOfWork<ModelContext> = .init(delegator: registrar, context: modelContext)
-
-uow.execute { context in 
-
-    let employee: Employee = .init(name: "Skylark")
-    employee.youreHired() // Event raised here.
-    context.insert(employee)
-    
+// Define the services.
+class NotificationService {
+    func notifyCustomer(customerId: UUID, message: String) {
+        print("Greetings, valued customer \(customerId).\n\n\(message)\n\nThank you.")
+    }
 }
+
+func example() async throws {
+
+    // 1. 
+    // We'll need a DependencyResolver to connect arbitrary dependencies to the handlers.
+    // Use ServiceLocator from LambdaspireDependencyResolution or create your own.
+    // Register services / dependencies.
+    let serviceLocator: ServiceLocator = .init()
+    serviceLocator.register(NotificationService())
+
+    // 2. 
+    // The DomainEventHandlerRegistrar is the package's default implementation the 
+    // DomainEventDelegator protocol which is responsible for marshalling events to their handlers
+    // with dependency resolution capabilities.
+    let registrar: DomainEventHandlerRegistrar = .init(resolver: serviceLocator)
+
+    // 3. 
+    // Register each handler.
+    // In this example, only one.
+    registrar.register(OrderPlacedHandler.self)
+
+    // 4.
+    // Create a UnitOfWork using the registrar as a delegator and a SwiftData ModelContext.
+    // Assume modelContext is already established (perhaps via @Environment).
+    let unitOfWork: UnitOfWork<ModelContext> = .init(delegator: registrar, context: modelContext)
+
+    // 5. 
+    // Perform domain activity.
+    try await unitOfWork.execute { context in
+        
+        let customer = getCurrentlyAuthenticatedUserCustomerRecord(context)
+        
+        let pretendNewOrder: Order = .init()
+
+        customer.placeOrder(pretendNewOrder)
+    }
+}
+
 ```
+
+There is a more comprehensive example using SwiftUI in the appendix.
+
+## The End
+
+Found a bug? Got ideas? Put up a Pull Request. 🙏
 
 ## Appendix
 

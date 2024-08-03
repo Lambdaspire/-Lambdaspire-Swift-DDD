@@ -3,7 +3,6 @@ import XCTest
 import SwiftData
 import LambdaspireAbstractions
 import LambdaspireDependencyResolution
-import LambdaspireLogging
 
 @testable import LambdaspireSwiftDDD
 
@@ -16,24 +15,38 @@ class BaseTests : XCTestCase {
     
     override func setUp() async throws {
         
-        Log.setLogger(PrintLogger())
+        let builder: ContainerBuilder = .init()
         
-        hooks = .init()
+        builder.singleton(Hooks.init)
+        builder.singleton(ModelContext.self) {
+            .init(
+                try! .init(
+                    for: TestEntity.self, AnotherTestEntity.self,
+                    configurations: .init(isStoredInMemoryOnly: true, allowsSave: true)))
+        }
+        builder.singleton(DomainEventHandlerRegistrar.init)
+        builder.singleton(DomainEventDelegator.self, assigned(DomainEventHandlerRegistrar.self))
+        builder.transient(UnitOfWorkFactory<ModelContext>.self)
+        builder.transient(DependencyResolutionScope.self) { $0 }
         
-        let serviceLocator: ServiceLocator = .init()
-        serviceLocator.register(hooks!)
+        let container = builder.build()
         
-        registrar = .init(resolver: serviceLocator)
-        
-        modelContext = .init(
-            try! .init(
-                for: TestEntity.self, AnotherTestEntity.self,
-                configurations: .init(isStoredInMemoryOnly: true, allowsSave: true)))
-        
-        unitOfWork = .init(delegator: registrar, context: modelContext)
+        modelContext = container.resolve()
+        registrar = container.resolve()
+        hooks = container.resolve()
+        unitOfWork = container.resolve(UnitOfWorkFactory<ModelContext>.self).create()
     }
+}
+
+// TODO: It seems like @Resolvable serves better in Abstractions.
+@Resolvable
+class UnitOfWorkFactory<Context: DomainContext> {
     
-    override func tearDown() {
-        hooks.clear()
+    private let delegator: DomainEventDelegator
+    private let context: Context
+    private let scope: DependencyResolutionScope
+    
+    func create() -> UnitOfWork<Context> {
+        .init(delegator: delegator, context: context, scope: scope)
     }
 }

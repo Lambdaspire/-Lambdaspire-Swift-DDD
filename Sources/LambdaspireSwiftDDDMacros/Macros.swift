@@ -11,7 +11,7 @@ enum DomainEntityMacroUsageError : String, DiagnosticMessage {
     
     var message: String { rawValue }
     
-    var diagnosticID: MessageID { .init(domain: "LambdaspireSwiftDDD", id: rawValue) } // TODO: What should this be?
+    var diagnosticID: MessageID { .init(domain: "LambdaspireSwiftDDD", id: rawValue) }
     
     var severity: DiagnosticSeverity { .error }
 }
@@ -33,7 +33,6 @@ public struct DomainEntityMacro : MemberMacro, ExtensionMacro {
             }
             
             let decl: DeclSyntax =
-            // TODO: I would prefer this be refactor-friendly.
             """
             extension \(type.trimmed) : HasDomainEvents { }
             """
@@ -59,7 +58,6 @@ public struct DomainEntityMacro : MemberMacro, ExtensionMacro {
             }
             
             return [
-                // TODO: I would prefer this be refactor-friendly.
                 "@Transient var events: [any DomainEvent] = []"
             ]
         }

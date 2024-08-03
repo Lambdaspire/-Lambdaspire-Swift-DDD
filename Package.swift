@@ -23,13 +23,10 @@ let package = Package(
         // Lambdaspire
         .package(
             url: "https://github.com/Lambdaspire/Lambdaspire-Swift-DependencyResolution",
-            from: "1.0.0"),
+            from: "2.0.0"),
         .package(
             url: "https://github.com/Lambdaspire/Lambdaspire-Swift-Abstractions",
-            from: "1.0.0"),
-        .package(
-            url: "https://github.com/Lambdaspire/Lambdaspire-Swift-Logging",
-            from: "1.0.0"),
+            from: "2.0.0"),
         
         // Apple
         .package(
@@ -66,7 +63,6 @@ let package = Package(
             dependencies: [
                 "LambdaspireSwiftDDD",
                 .product(name: "LambdaspireDependencyResolution", package: "Lambdaspire-Swift-DependencyResolution"),
-                .product(name: "LambdaspireLogging", package: "Lambdaspire-Swift-Logging"),
             ]),
     ]
 )

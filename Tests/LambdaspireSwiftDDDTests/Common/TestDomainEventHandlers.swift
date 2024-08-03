@@ -1,25 +1,41 @@
 
 import LambdaspireSwiftDDD
 import LambdaspireAbstractions
+import LambdaspireDependencyResolution
 
-struct TestPreCommitDomainEventHandler : DomainEventHandler {
-    static func handle(event: TestDomainEvent, resolver: DependencyResolver) async throws {
-        resolver.resolve(Hooks.self).use("PreCommit")
+@Resolvable
+class TestPreCommitDomainEventHandler : DomainEventHandler {
+    
+    private let hooks: Hooks
+    
+    init(hooks: Hooks) {
+        self.hooks = hooks
+    }
+    
+    func handle(event: TestDomainEvent) async throws {
+        hooks.use("PreCommit")
     }
 }
 
-struct TestPostCommitDomainEventHandler : DomainEventHandler {
+@Resolvable
+class TestPostCommitDomainEventHandler : DomainEventHandler {
     
     static var isPostCommit: Bool { true }
     
-    static func handle(event: TestDomainEvent, resolver: DependencyResolver) async throws {
-        resolver.resolve(Hooks.self).use("PostCommit")
+    private let hooks: Hooks
+    
+    func handle(event: TestDomainEvent) async throws {
+        hooks.use("PostCommit")
     }
 }
 
-struct TestThrowingPreCommitDomainEventHandler : DomainEventHandler {
-    static func handle(event: TestDomainEvent, resolver: DependencyResolver) async throws {
-        resolver.resolve(Hooks.self).use("ThrowingPreCommit")
+@Resolvable
+class TestThrowingPreCommitDomainEventHandler : DomainEventHandler {
+    
+    var hooks: Hooks
+    
+    func handle(event: TestDomainEvent) async throws {
+        hooks.use("ThrowingPreCommit")
         throw EmptyError()
     }
 }

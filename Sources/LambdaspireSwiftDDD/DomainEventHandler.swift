@@ -1,15 +1,13 @@
 
 import LambdaspireAbstractions
 
-public protocol DomainEventHandler {
+public protocol DomainEventHandler : Resolvable {
     
     associatedtype DomainEventType : DomainEvent
     
     static var isPostCommit: Bool { get }
     
-    static func handle(
-        event: DomainEventType,
-        resolver: DependencyResolver) async throws
+    func handle(event: DomainEventType) async throws
 }
 
 public extension DomainEventHandler {
